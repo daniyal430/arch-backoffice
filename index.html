@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3c0f0d">
+<title>Arch View Orders</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2730%27 fill=%27%233c0f0d%27/%3E%3Cpath d=%27M18 26h26v10a13 13 0 0 1-26 0z%27 fill=%27%23e0a35b%27/%3E%3C/svg%3E">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f1ec;--bg-2:#ece6df;--card:#ffffff;--sand:#f3e8da;--sky:#e3ebf1;
+  --line:#e6ddd3;--line-2:#cdbfb1;
+  --ink:#312d29;--ink-2:#5f5750;--ink-3:#8b8078;
+  --red:#a8232b;--red-2:#c93c44;--red-soft:#fbe9e8;
+  --amber:#c2621a;--amber-soft:#fdeedd;--gold:#e0a35b;
+  --rust:#5c2317;--maroon:#3c0f0d;--slate:#5c7a8a;--slate-soft:#e6eef3;
+  --green:#2e7d4f;--green-soft:#e2f2e8;--wa:#25d366;
+  --sh-1:0 1px 2px rgba(49,45,41,.06),0 2px 8px rgba(49,45,41,.06);
+  --sh-2:0 6px 20px rgba(49,45,41,.10),0 2px 6px rgba(49,45,41,.06);
+  --sh-3:0 18px 40px rgba(49,45,41,.18);
+  --r:16px;--r-sm:10px;--r-lg:24px;--pill:999px;
+  --display:"Archivo Black","Archivo","Arial Black",sans-serif;--sans:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#1b1614;--bg-2:#2a2320;--card:#241e1b;--sand:#2f2620;--sky:#25303a;--line:#3a312c;--line-2:#5a4d45;--ink:#f1e9e2;--ink-2:#cbbdb3;--ink-3:#9a8c82;--red:#e0666c;--red-2:#f08a8a;--red-soft:#3d1f21;--amber:#e39a58;--amber-soft:#3b2717;--slate:#9fb8c6;--slate-soft:#243039;--green:#6cc48f;--green-soft:#1f3327;--sh-1:0 1px 2px rgba(0,0,0,.4);--sh-2:0 6px 20px rgba(0,0,0,.5);--sh-3:0 18px 40px rgba(0,0,0,.6)}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#1b1614;--bg-2:#2a2320;--card:#241e1b;--sand:#2f2620;--sky:#25303a;--line:#3a312c;--line-2:#5a4d45;--ink:#f1e9e2;--ink-2:#cbbdb3;--ink-3:#9a8c82;--red:#e0666c;--red-2:#f08a8a;--red-soft:#3d1f21;--amber:#e39a58;--amber-soft:#3b2717;--slate:#9fb8c6;--slate-soft:#243039;--green:#6cc48f;--green-soft:#1f3327;--sh-1:0 1px 2px rgba(0,0,0,.4);--sh-2:0 6px 20px rgba(0,0,0,.5);--sh-3:0 18px 40px rgba(0,0,0,.6)}
+.btn.primary,.btn.amber,.chip.on,.tab.on{color:#fff}.tab.on{color:var(--rust)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:22px;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+h1,h2,h3,p{margin:0}
+.caption{font-size:12.5px;line-height:18px;color:var(--ink-3)}
+.muted{color:var(--ink-3)}.red{color:var(--red)}
+.hidden{display:none!important}
+
+/* ===== app shell: rail + content ===== */
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh;background:linear-gradient(90deg,#5c2317 0,#5c2317 232px,var(--bg) 232px)}
+@media(max-width:900px){.app{background:var(--bg)}}
+.rail{position:sticky;top:env(safe-area-inset-top,0px);height:100vh;background:linear-gradient(180deg,#3c0f0d 0%,#5c2317 100%);color:#f6ede6;padding:20px 14px;display:flex;flex-direction:column;gap:6px}
+.rail .logo{display:flex;align-items:center;gap:10px;padding:6px 8px 18px}
+.rail .logo .mark{width:40px;height:40px;border-radius:50%;background:#f6ede6;display:grid;place-items:center;box-shadow:0 0 0 3px rgba(255,255,255,.12)}
+.rail .logo b{font-family:var(--display);letter-spacing:.06em;font-size:15px;line-height:18px;display:block}
+.rail .logo span{font-size:11px;opacity:.7}
+.tab{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;color:#e9d9d0;padding:11px 12px;border-radius:12px;font-weight:500;font-size:14px;cursor:pointer;text-align:left;transition:background .2s,transform .2s var(--ease)}
+.tab svg{width:20px;height:20px;flex:none;opacity:.85}
+.tab:hover{background:rgba(255,255,255,.08);transform:translateX(2px)}
+.tab.on{background:#f6ede6;color:var(--rust);box-shadow:var(--sh-1)}
+.tab.on svg{opacity:1}
+.tab:focus-visible{outline:2px solid #f6ede6;outline-offset:2px}
+.rail .spacer{flex:1}
+.rail .who{display:flex;align-items:center;gap:10px;padding:10px 8px;border-top:1px solid rgba(255,255,255,.12)}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--amber));display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;flex:none}
+.who .nm{font-size:13px;font-weight:600;line-height:16px}.who .rl{font-size:11px;opacity:.7}
+.who button{margin-left:auto;background:transparent;border:1px solid rgba(255,255,255,.25);color:#f6ede6;border-radius:var(--pill);padding:4px 10px;font-size:12px;cursor:pointer}
+.who button:hover{background:rgba(255,255,255,.1)}
+.content{min-width:0;padding:24px 32px 96px}
+@media(max-width:900px){
+  .app{grid-template-columns:1fr}
+  .rail{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;flex-direction:row;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));gap:2px;border-radius:20px 20px 0 0;box-shadow:var(--sh-3);z-index:20;justify-content:space-around}
+  .rail .logo,.rail .spacer,.rail .who{display:none}
+  .tab{flex-direction:column;gap:3px;padding:8px 6px;font-size:10.5px;font-weight:600;border-radius:12px;flex:1;text-align:center}
+  .tab:hover{transform:none}
+  .content{padding:16px 16px 100px}
+  .mobile-top{display:flex!important}
+}
+.mobile-top{display:none;align-items:center;gap:10px;margin-bottom:12px}
+.mobile-top .mark{width:36px;height:36px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:var(--sh-1)}
+.mobile-top b{font-family:var(--display);letter-spacing:.06em;color:var(--rust)}
+.mobile-top .avatar{margin-left:auto;width:32px;height:32px}
+
+/* ===== views ===== */
+section.view{display:none}section.view.on{display:block;animation:rise .35s var(--ease)}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.page-head{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.page-title{font-family:var(--display);font-size:24px;line-height:28px;letter-spacing:.02em;color:var(--ink)}
+.page-title em{font-style:normal;color:var(--red)}
+
+/* hero (Redwood-style banner) */
+.hero{position:relative;overflow:hidden;border-radius:var(--r-lg);background:linear-gradient(120deg,#3c0f0d 0%,#7a2a1e 55%,#a8232b 100%);color:#fff;padding:28px 32px;margin-bottom:20px;box-shadow:var(--sh-2)}
+.hero h1{font-family:var(--display);font-size:30px;line-height:34px;letter-spacing:.02em}
+.hero p{opacity:.85;margin-top:6px;max-width:520px}
+.hero .shapes{position:absolute;inset:0;pointer-events:none}
+.hero .shapes i{position:absolute;border-radius:50%;background:rgba(255,255,255,.08);animation:float 9s ease-in-out infinite}
+.hero .shapes i:nth-child(1){width:260px;height:260px;right:-60px;top:-120px;background:rgba(224,163,91,.35)}
+.hero .shapes i:nth-child(2){width:160px;height:160px;right:180px;bottom:-90px;animation-delay:-3s}
+.hero .shapes i:nth-child(3){width:90px;height:90px;right:120px;top:20px;background:rgba(255,255,255,.14);animation-delay:-6s}
+.hero .shapes i:nth-child(4){width:40px;height:40px;right:330px;top:36px;background:rgba(224,163,91,.6);animation-delay:-1.5s}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.hero .row{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;position:relative}
+.seg{display:inline-flex;background:rgba(255,255,255,.14);border-radius:var(--pill);padding:4px;gap:2px}
+.seg button{border:0;background:transparent;color:#fff;padding:6px 14px;border-radius:var(--pill);font-weight:600;font-size:13px;cursor:pointer;transition:background .2s}
+.seg button.on{background:#fff;color:var(--rust)}
+.hero.compact{padding:22px 28px}.hero.compact h1{font-size:24px;line-height:28px}
+.hero.amber{background:linear-gradient(120deg,#5c2317 0%,#9a4a1c 60%,#c2621a 100%)}
+.hero.slate{background:linear-gradient(120deg,#2f3f47 0%,#4b6472 60%,#5c7a8a 100%)}
+
+/* cards */
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh-1);padding:18px 20px;transition:box-shadow .25s,transform .25s var(--ease)}
+.card.hover:hover{box-shadow:var(--sh-2);transform:translateY(-2px)}
+.card h3{font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--ink-3);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1.7fr 1fr}
+@media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.g2,.g3{grid-template-columns:1fr}}
+
+/* KPI tiles */
+.kpi{display:flex;gap:14px;align-items:flex-start;padding:16px 18px}
+.kpi .ic{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none}
+.kpi .ic svg{width:22px;height:22px}
+.kpi .ic.red{background:var(--red-soft);color:var(--red)}.kpi .ic.amber{background:var(--amber-soft);color:var(--amber)}.kpi .ic.slate{background:var(--slate-soft);color:var(--slate)}.kpi .ic.green{background:var(--green-soft);color:var(--green)}
+.kpi h3{margin-bottom:2px}
+.kpi .v{font-family:var(--display);font-size:26px;line-height:30px;color:var(--ink);letter-spacing:.01em}
+.kpi .v small{font-family:var(--sans);font-size:13px;color:var(--ink-3);margin-left:4px;font-weight:500}
+.kpi .d{font-size:12.5px;line-height:18px;margin-top:4px}
+.up{color:var(--green);font-weight:600}.down{color:var(--red);font-weight:600}
+.pillc{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:var(--pill);font-size:12px;font-weight:600}
+.pillc.up{background:var(--green-soft)}.pillc.down{background:var(--red-soft)}
+
+/* controls */
+.btn{height:44px;padding:0 22px;border-radius:var(--pill);border:1px solid var(--line-2);background:var(--card);color:var(--ink);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;transition:transform .15s var(--ease),box-shadow .2s,background .2s}
+.btn:hover{box-shadow:var(--sh-1);transform:translateY(-1px)}
+.btn:active{transform:translateY(0) scale(.98)}
+.btn.primary{background:linear-gradient(135deg,var(--red),var(--red-2));border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(168,35,43,.28)}
+.btn.primary:hover{box-shadow:0 10px 22px rgba(168,35,43,.34)}
+.btn.amber{background:linear-gradient(135deg,var(--amber),#d97a2b);border-color:transparent;color:#fff}
+.btn.sm{height:34px;padding:0 14px;font-size:13px}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.btn:disabled{opacity:.5;cursor:default;transform:none;box-shadow:none}
+input,select{height:46px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);padding:0 14px;width:100%;transition:border-color .2s,box-shadow .2s}
+input:focus{border-color:var(--red);box-shadow:0 0 0 4px rgba(168,35,43,.10);outline:none}
+label{display:block;font-size:12.5px;line-height:18px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+.field{margin-bottom:14px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1.5px solid var(--line);background:var(--card);border-radius:var(--pill);padding:7px 14px;cursor:pointer;font-size:13.5px;line-height:18px;font-weight:500;transition:all .2s var(--ease)}
+.chip:hover{border-color:var(--line-2);transform:translateY(-1px)}
+.chip.on{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 4px 12px rgba(168,35,43,.25)}
+.chip.amber.on{background:var(--amber);border-color:var(--amber);box-shadow:0 4px 12px rgba(194,98,26,.25)}
+.price{display:inline-block;font-weight:700;font-size:14px;color:var(--red);background:var(--red-soft);border-radius:var(--pill);padding:1px 10px;line-height:22px;white-space:nowrap}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;line-height:18px;font-weight:600;padding:1px 9px;border-radius:var(--pill);background:var(--bg-2);color:var(--ink-2)}
+.tag.new{background:var(--amber-soft);color:var(--amber)}.tag.rep{background:var(--green-soft);color:var(--green)}.tag.del{background:var(--slate-soft);color:var(--slate)}
+
+/* order form */
+.order{display:grid;grid-template-columns:1fr 380px;gap:20px}
+@media(max-width:1000px){.order{grid-template-columns:1fr}}
+.order>div{min-width:0}
+.search{position:relative;margin-bottom:12px}.search svg{position:absolute;left:14px;top:14px;width:18px;height:18px;color:var(--ink-3)}.search input{padding-left:42px}
+.cats{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;margin-bottom:10px;min-width:0;scrollbar-width:none}.cats::-webkit-scrollbar{display:none}
+.cats .chip{flex:none;white-space:nowrap}
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;max-height:56vh;overflow:auto;padding:4px}
+.item{text-align:left;background:var(--card);border:0;border-radius:var(--r);padding:14px 14px 12px;cursor:pointer;display:grid;gap:4px;box-shadow:var(--sh-1);transition:transform .2s var(--ease),box-shadow .2s;position:relative;overflow:hidden}
+.item::after{content:"+";position:absolute;right:12px;bottom:10px;width:26px;height:26px;border-radius:50%;background:var(--red-soft);color:var(--red);display:grid;place-items:center;font-weight:700;transition:all .2s}
+.item:hover{transform:translateY(-3px);box-shadow:var(--sh-2)}.item:hover::after{background:var(--red);color:#fff}
+.item:active{transform:scale(.97)}
+.item b{font-weight:700;font-size:14.5px;line-height:19px;padding-right:20px}
+.item .ar{font-size:12.5px;color:var(--ink-3);direction:rtl;text-align:right;padding-left:28px}
+.item.pop{animation:pop .3s var(--ease)}@keyframes pop{50%{transform:scale(.94)}}
+.cart{position:sticky;top:24px;padding:0;overflow:hidden}
+.cart .ch{background:linear-gradient(120deg,#3c0f0d,#7a2a1e);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
+.cart .ch b{font-family:var(--display);letter-spacing:.06em;font-size:14px}
+.cart .ch .cnt{background:rgba(255,255,255,.18);border-radius:var(--pill);padding:2px 10px;font-size:12px;font-weight:600}
+.cart .cb{padding:18px 20px}
+.line{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);animation:rise .3s var(--ease)}
+.line .n{flex:1;min-width:0;font-size:14px;font-weight:500}
+.qty{display:flex;align-items:center;gap:6px}
+.qty button{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);cursor:pointer;font-weight:700;transition:all .15s}
+.qty button:hover{border-color:var(--red);color:var(--red)}
+.total{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0 12px;font-size:16px;font-weight:700}
+.total .big{font-family:var(--display);font-size:26px;color:var(--red)}
+.empty{padding:28px 0;text-align:center;color:var(--ink-3)}
+.empty svg{width:40px;height:40px;opacity:.35;display:block;margin:0 auto 6px}
+
+/* tables */
+.tbl{padding:8px 0 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);padding:8px 14px;border-bottom:1px solid var(--line);font-weight:700;white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr{transition:background .15s}tbody tr:hover td{background:var(--sand)}
+.bar{height:6px;border-radius:3px;background:var(--red-soft);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--red-2));border-radius:3px;animation:grow .8s var(--ease)}
+.bar.amber{background:var(--amber-soft)}.bar.amber i{background:linear-gradient(90deg,var(--amber),var(--gold))}
+@keyframes grow{from{width:0!important}}
+.rank{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--bg-2);font-size:12px;font-weight:700;color:var(--ink-2);margin-right:8px}
+.rank.top{background:var(--red);color:#fff}
+.wa{display:inline-flex;align-items:center;gap:6px;background:var(--green-soft);color:var(--green);border-radius:var(--pill);padding:5px 12px;font-size:12.5px;font-weight:600;text-decoration:none;transition:all .2s}
+.wa:hover{background:var(--wa);color:#fff}
+
+/* charts */
+.chart{width:100%;height:auto;display:block}
+.chart rect{transition:opacity .2s}.chart rect:hover{opacity:.75}
+.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:var(--maroon);color:#f6ede6;padding:12px 20px;border-radius:var(--pill);box-shadow:var(--sh-3);opacity:0;transition:.35s var(--ease);pointer-events:none;font-weight:600;display:flex;gap:8px;align-items:center;z-index:30}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast .ok{width:20px;height:20px;border-radius:50%;background:var(--green);display:grid;place-items:center}
+
+/* login */
+#login{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(1200px 600px at 80% -10%,#fdeedd 0%,transparent 60%),radial-gradient(900px 500px at -10% 110%,#fbe9e8 0%,transparent 60%),var(--bg)}
+.login-card{width:min(440px,100%);text-align:center;padding:36px 32px;border-radius:var(--r-lg);box-shadow:var(--sh-3);animation:rise .5s var(--ease)}
+.login-card .emblem{width:104px;height:104px;border-radius:50%;background:#fff;border:4px solid var(--rust);margin:0 auto 14px;display:grid;place-items:center;box-shadow:0 0 0 8px var(--red-soft)}
+.login-card h1{font-family:var(--display);letter-spacing:.08em;font-size:26px;color:var(--rust);margin-bottom:2px}
+.login-card .roles{display:grid;gap:10px;margin-top:22px}
+.login-card .roles button{display:flex;align-items:center;gap:14px;text-align:left;padding:12px 14px;height:auto;border-radius:var(--r);border:1.5px solid var(--line)}
+.login-card .roles button:hover{border-color:var(--red)}
+.login-card .roles button .t b{display:block;font-size:15px}.login-card .roles button .t span{font-size:12.5px;color:var(--ink-3);font-weight:400}
+.login-card .roles button .go{margin-left:auto;color:var(--red)}
+.note{background:var(--sand);border-radius:var(--r);padding:12px 14px;font-size:13.5px;line-height:20px}
+.item .price{justify-self:start}
+@media(max-width:600px){.items{grid-template-columns:repeat(2,1fr);max-height:none}.item .ar{display:none}.item b{font-size:13.5px}}
+.fbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-6px 0 16px;min-height:34px}
+.fchip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--red);background:var(--red-soft);color:var(--red);border-radius:var(--pill);padding:5px 12px;font-size:13px;font-weight:600;cursor:pointer;animation:rise .25s var(--ease)}
+.fchip b{font-size:15px;line-height:1}.fchip:hover{background:var(--red);color:#fff}
+.fchip.clear{background:transparent;border-color:var(--line-2);color:var(--ink-2)}.fchip.clear:hover{background:var(--bg-2);color:var(--ink)}
+.hit{cursor:pointer}svg .hit:hover rect:nth-child(2){opacity:.8}
+tr.hit.sel td{background:var(--red-soft)}tr.hit.sel td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+.drill{animation:rise .35s var(--ease)}
+.chart text{fill:var(--ink-3)}.chart text.strong{fill:var(--ink)}
+.stat{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--ink-3)}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block}.dot.off{background:var(--ink-3)}
+.void{opacity:.5;text-decoration:line-through}
+.rowact{border:0;background:transparent;color:var(--ink-3);cursor:pointer;font-size:12px;padding:2px 6px;border-radius:6px}.rowact:hover{background:var(--red-soft);color:var(--red)}
+.prefill{background:var(--green-soft);border:1.5px solid var(--green);color:var(--green);border-radius:12px;padding:10px 14px;font-size:13.5px;margin-bottom:14px;display:flex;gap:8px;align-items:center}
+.who .rl,.mobile-top{text-transform:none}
+.spin{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--red);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 12px}@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<symbol id="i-cup" viewBox="0 0 64 64"><path d="M18 26h26v10a13 13 0 0 1-26 0z" fill="#c2621a"/><path d="M44 29h4a5 5 0 0 1 0 10h-4" fill="none" stroke="#c2621a" stroke-width="3"/><rect x="16" y="50" width="30" height="4" rx="2" fill="#c2621a"/><path d="M26 8c-3 4 3 6 0 10M32 6c-3 4 3 6 0 10M38 8c-3 4 3 6 0 10" fill="none" stroke="#c2621a" stroke-width="2.5" stroke-linecap="round"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="4" cy="6" r="1.3" fill="currentColor"/><circle cx="4" cy="12" r="1.3" fill="currentColor"/><circle cx="4" cy="18" r="1.3" fill="currentColor"/></symbol>
+<symbol id="i-dash" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="3" width="8" height="5" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="11" width="8" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="8" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+<symbol id="i-food" viewBox="0 0 24 24"><path d="M4 3v7a3 3 0 0 0 6 0V3M7 3v18M17 3c-2 0-3 3-3 6v3h3v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 13.5a6 6 0 0 1 3.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+<symbol id="i-cash" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+<symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+<symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 6v12" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-wa" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 8.5c0 3.5 3 6.5 6.5 6.5l1-1.6-2-1-1 1a5 5 0 0 1-2.4-2.4l1-1-1-2z" fill="currentColor"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</defs></svg>
+
+<section id="login">
+  <form class="login-card card" id="loginForm" autocomplete="on">
+    <div class="emblem"><svg width="60" height="60"><use href="#i-cup"/></svg></div>
+    <h1>Arch View</h1>
+    <p class="caption">Restaurant &amp; Cafe · WhatsApp orders back office</p>
+    <div style="text-align:left;margin-top:22px">
+      <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required placeholder="you@example.com"></div>
+      <div class="field"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required placeholder="••••••••"></div>
+      <button class="btn primary" style="width:100%" id="loginBtn" type="submit">Sign in</button>
+      <p class="caption" id="loginErr" style="margin-top:10px;color:var(--red);min-height:18px"></p>
+    </div>
+    <p class="caption">Accounts are created by the manager. Forgot your password? Ask the manager to reset it.</p>
+  </form>
+</section>
+
+
+<div class="app hidden" id="main">
+<nav class="rail" id="tabs">
+  <div class="logo"><div class="mark"><svg width="26" height="26"><use href="#i-cup"/></svg></div><div><b>ARCH VIEW</b><span>WhatsApp orders</span></div></div>
+  <button class="tab on" data-view="order"><svg><use href="#i-plus"/></svg>New order</button>
+  <button class="tab" data-view="orders"><svg><use href="#i-list"/></svg>Orders</button>
+  <button class="tab mgr" data-view="dash"><svg><use href="#i-dash"/></svg>Dashboard</button>
+  <button class="tab mgr" data-view="items"><svg><use href="#i-food"/></svg>Items</button>
+  <button class="tab mgr" data-view="customers"><svg><use href="#i-people"/></svg>Customers</button>
+  <button class="tab mgr" data-view="settings"><svg><use href="#i-cog"/></svg>Settings</button>
+  <div class="spacer"></div>
+  <div class="who"><div class="avatar" id="avatar">D</div><div><div class="nm" id="whoName">Danial</div><div class="rl" id="whoRole">Manager</div></div><button id="logout">Sign out</button></div>
+</nav>
+
+<main class="content">
+<div class="mobile-top"><div class="mark"><svg width="22" height="22"><use href="#i-cup"/></svg></div><b>ARCH VIEW</b><div class="avatar" id="avatarM">D</div></div>
+
+<!-- NEW ORDER -->
+<section class="view on" id="v-order">
+  <div class="hero compact amber"><div class="shapes"><i></i><i></i><i></i><i></i></div>
+    <div class="row"><div><h1>New WhatsApp order</h1><p>Tap the items, add the customer's number, save. About 20 seconds.</p></div></div>
+  </div>
+  <div class="order">
+    <div>
+      <div class="search"><svg><use href="#i-search"/></svg><input id="search" placeholder="Search items — English or Arabic"></div>
+      <div class="cats" id="cats"></div>
+      <div class="items" id="items"></div>
+    </div>
+    <div class="cart card">
+      <div class="ch"><b>ORDER</b><span class="cnt" id="cartCnt">0 items</span></div>
+      <div class="cb">
+      <div class="prefill hidden" id="prefill"><svg width="18" height="18"><use href="#i-wa"/></svg><span id="prefillTxt"></span></div>
+      <div class="field"><label>Customer WhatsApp number</label><input id="phone" inputmode="tel" placeholder="05x xxx xxxx"><div class="caption" id="phoneHint" style="margin-top:6px"></div></div>
+      <div class="field"><label>Customer name <span class="muted" style="font-weight:400">(optional)</span></label><input id="cname" placeholder="As saved in WhatsApp"></div>
+      <div class="field"><label>Type</label><div class="chips" id="otype"><button class="chip on" data-v="Pickup">Pickup</button><button class="chip" data-v="Delivery">Delivery</button><button class="chip" data-v="Dine-in">Dine-in</button></div></div>
+      <div class="field"><label>Payment</label><div class="chips" id="pay"><button class="chip amber on" data-v="Cash">Cash</button><button class="chip amber" data-v="Card on delivery">Card</button><button class="chip amber" data-v="Bank transfer">Transfer</button></div></div>
+      <div id="lines"></div>
+      <div class="total"><span>Total</span><span class="big" id="total">SR 0</span></div>
+      <button class="btn primary" style="width:100%" id="save"><svg width="18" height="18"><use href="#i-wa"/></svg>Save order</button>
+      <p class="caption" style="margin-top:10px">The POS / ZATCA invoice is still issued at the counter as today. This only records the WhatsApp order.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ORDERS -->
+<section class="view" id="v-orders">
+  <div class="page-head"><div><h2 class="page-title">Orders</h2><p class="caption">Newest first, last 60 days. Everyone sees every order; only managers can void one.</p></div><span class="stat" id="live"><span class="dot"></span>Live</span></div>
+  <div class="card tbl"><table id="ordersTbl"><thead><tr><th>Time</th><th>Customer</th><th>Items</th><th>Type</th><th>Payment</th><th class="num">Total</th><th>Logged by</th><th></th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<!-- DASHBOARD -->
+<section class="view" id="v-dash">
+  <div class="hero"><div class="shapes"><i></i><i></i><i></i><i></i></div>
+    <div class="row"><div><h1 id="greet">Good evening, Danial</h1><p id="dashDate"></p></div>
+      <div class="seg"><button class="on" data-range="today">Today</button><button data-range="7">7 days</button><button data-range="30">30 days</button></div></div>
+  </div>
+  <div class="fbar" id="fbar"></div>
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="card kpi hover"><div class="ic red"><svg><use href="#i-cash"/></svg></div><div><h3>WhatsApp sales</h3><div class="v" id="kSales"></div><div class="d" id="kSalesD"></div></div></div>
+    <div class="card kpi hover"><div class="ic amber"><svg><use href="#i-bag"/></svg></div><div><h3>Orders</h3><div class="v" id="kOrders"></div><div class="d" id="kOrdersD"></div></div></div>
+    <div class="card kpi hover"><div class="ic slate"><svg><use href="#i-ticket"/></svg></div><div><h3>Avg ticket</h3><div class="v" id="kAvg"></div><div class="d" id="kAvgD"></div></div></div>
+    <div class="card kpi hover"><div class="ic green"><svg><use href="#i-heart"/></svg></div><div><h3>Repeat customers</h3><div class="v" id="kRep"></div><div class="d" id="kRepD"></div></div></div>
+  </div>
+  <div class="grid g3" style="margin-bottom:16px">
+    <div class="card"><h3>Daily sales · last 14 days</h3><svg class="chart" id="cDaily" viewBox="0 0 640 200"></svg></div>
+    <div class="card"><h3>WhatsApp share of total sales</h3><svg class="chart" id="cShare" viewBox="0 0 300 200"></svg><p class="caption">Total = the POS Z-report entered in Settings. WhatsApp orders are also rung on the POS, so this is a share, not an addition.</p></div>
+  </div>
+  <div class="grid g2" style="margin-bottom:16px">
+    <div class="card"><h3>Orders by hour</h3><svg class="chart" id="cHours" viewBox="0 0 640 180"></svg></div>
+    <div class="card tbl" style="padding-top:18px"><h3 style="padding:0 14px">Top 8 items</h3><table id="topItems"><tbody></tbody></table></div>
+  </div>
+  <div class="grid g2">
+    <div class="card tbl" style="padding-top:18px"><h3 style="padding:0 14px">Sales by category</h3><table id="byCat"><tbody></tbody></table></div>
+    <div class="card tbl" style="padding-top:18px"><h3 style="padding:0 14px">Order type &amp; payment</h3><table id="byType"><tbody></tbody></table></div>
+  </div>
+  <div class="card tbl drill hidden" id="drill" style="margin-top:16px;padding-top:18px"><h3 style="padding:0 14px"><span id="drillTitle">Matching orders</span><button class="btn sm" style="margin-left:auto" onclick="show('orders')">Open in Orders</button></h3><table id="drillTbl"><thead><tr><th>Time</th><th>Customer</th><th>Items</th><th>Type</th><th>Payment</th><th class="num">Total</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<!-- ITEMS -->
+<section class="view" id="v-items">
+  <div class="page-head"><div><h2 class="page-title">Items sold</h2><p class="caption">Last 30 days from WhatsApp orders. Slow movers sink to the bottom.</p></div></div>
+  <div class="card tbl"><table id="itemsTbl"><thead><tr><th>Item</th><th>Category</th><th class="num">Qty</th><th class="num">Sales</th><th class="num">Orders</th><th>Trend (4 wks)</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<!-- CUSTOMERS -->
+<section class="view" id="v-customers">
+  <div class="page-head"><div><h2 class="page-title">Customers</h2><p class="caption">Keyed by WhatsApp number. Repeat = two or more orders.</p></div></div>
+  <div class="card tbl"><table id="custTbl"><thead><tr><th>Customer</th><th>Number</th><th class="num">Orders</th><th class="num">Spent</th><th>Last order</th><th>Favourite</th><th></th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<!-- SETTINGS -->
+<section class="view" id="v-settings">
+  <div class="page-head"><div><h2 class="page-title">Settings</h2></div></div>
+  <div class="grid g2">
+    <div class="card"><h3>Daily POS total (Z-report)</h3><p class="caption" style="margin-bottom:12px">Type the day's total from the POS once at closing. Used only for the WhatsApp-share chart.</p>
+      <div class="field"><label>Date</label><input type="date" id="zDate"></div>
+      <div class="field"><label>Total sales (SR)</label><input inputmode="decimal" id="zTotal" placeholder="e.g. 4 850"></div>
+      <button class="btn amber" id="zSave">Save total</button></div>
+    <div class="card tbl" style="padding-top:18px"><h3 style="padding:0 14px">Users &amp; roles</h3><table id="usersTbl"><thead><tr><th>Name</th><th>Role</th><th></th></tr></thead><tbody></tbody></table><p class="caption" style="padding:10px 14px 0">Add a login in Supabase → Authentication → Users → Add user (email + password). New users start as staff; switch the role here.</p><div class="hidden">
+      <table><thead><tr><th>Name</th><th>Role</th><th></th></tr></thead><tbody>
+      <tr><td><span class="avatar" style="width:28px;height:28px;font-size:11px;display:inline-grid;vertical-align:middle;margin-right:8px">D</span>Danial</td><td><span class="tag rep">Manager</span></td><td></td></tr>
+      <tr><td><span class="avatar" style="width:28px;height:28px;font-size:11px;display:inline-grid;vertical-align:middle;margin-right:8px;background:linear-gradient(135deg,#5c7a8a,#8aa4b2)">A</span>Ahmed</td><td><span class="tag">Staff</span></td><td class="caption">orders only</td></tr>
+      <tr><td><span class="avatar" style="width:28px;height:28px;font-size:11px;display:inline-grid;vertical-align:middle;margin-right:8px;background:linear-gradient(135deg,#2e7d4f,#6bb08a)">F</span>Fahad</td><td><span class="tag">Staff</span></td><td class="caption">orders only</td></tr>
+      </tbody></table></div></div>
+    <div class="card"><h3>Export</h3><p class="caption" style="margin-bottom:12px">Download orders, items and customers as CSV for Excel.</p><div class="chips"><button class="chip" data-csv="orders">Orders.csv</button><button class="chip" data-csv="items">Items.csv</button><button class="chip" data-csv="customers">Customers.csv</button></div></div>
+    <div class="card"><h3>Menu</h3><p class="caption" id="menuInfo">Items and prices are the arch-menu site's menu at the time this page was built. When the menu changes, ask Claude to refresh this page.</p></div>
+  </div>
+</section>
+</main>
+</div>
+<div class="toast" id="toast"><span class="ok"><svg width="14" height="14"><use href="#i-check"/></svg></span><span id="toastMsg"></span></div>
+<script>
+const MENU = {"groups": [{"name": "Breakfast", "cats": ["Pancakes", "Crepes", "Waffles", "Eggs & Breakfast", "Arabic Breakfast"]}, {"name": "Lunch & Dinner", "cats": ["Appetizers", "Soups", "Salads", "Pizza", "Sandwiches", "Burgers", "Pasta", "Main Course"]}, {"name": "Drinks", "cats": ["Hot Drinks", "Iced Beverages", "Milkshakes", "Fresh Juices", "Mojito", "Soft Drinks"]}, {"name": "Desserts", "cats": ["Ice Cream", "Arch View Cakes"]}], "items": [{"id": "i001", "name": "Classic Pancakes", "ar": "بان كيك كلاسيك", "cat": "Pancakes", "price": 27}, {"id": "i002", "name": "Strawberry Pancakes", "ar": "بان كيك فراولة", "cat": "Pancakes", "price": 45}, {"id": "i003", "name": "Mix Berry Pancake", "ar": "بان كيك توت مشكل", "cat": "Pancakes", "price": 45}, {"id": "i004", "name": "Mix Fruit Pancake", "ar": "بان كيك فواكه مشكلة", "cat": "Pancakes", "price": 45}, {"id": "i005", "name": "Lotus Pancakes", "ar": "بان كيك لوتس", "cat": "Pancakes", "price": 39}, {"id": "i006", "name": "Pistachio Pancakes", "ar": "بان كيك فستق", "cat": "Pancakes", "price": 45}, {"id": "i007", "name": "Raffaello Pancakes", "ar": "بان كيك رافايللو", "cat": "Pancakes", "price": 39}, {"id": "i008", "name": "Ferrero Pancakes", "ar": "بان كيك فيريرو", "cat": "Pancakes", "price": 39}, {"id": "i009", "name": "Kinder Pancakes", "ar": "بان كيك كيندر", "cat": "Pancakes", "price": 39}, {"id": "i010", "name": "Belgium Pancakes", "ar": "بان كيك بلجيكي", "cat": "Pancakes", "price": 39}, {"id": "i011", "name": "Koko Loco Coin", "ar": "كوكو لوكو كوين", "cat": "Pancakes", "price": 45}, {"id": "i012", "name": "Brownie Crepe", "ar": "كريب براوني", "cat": "Crepes", "price": 45}, {"id": "i013", "name": "Mix Fruit Crepe", "ar": "كريب فواكه مشكلة", "cat": "Crepes", "price": 45}, {"id": "i014", "name": "Banana Crepe", "ar": "كريب موز", "cat": "Crepes", "price": 39}, {"id": "i015", "name": "Pistachio Crepe", "ar": "كريب فستق", "cat": "Crepes", "price": 45}, {"id": "i016", "name": "Belgium Crepe", "ar": "كريب بلجيكي", "cat": "Crepes", "price": 39}, {"id": "i017", "name": "Lotus Crepe", "ar": "كريب لوتس", "cat": "Crepes", "price": 39}, {"id": "i018", "name": "Digestive Crepe", "ar": "كريب دايجستف", "cat": "Crepes", "price": 39}, {"id": "i019", "name": "Fettuccini Crepe", "ar": "كريب فيتوتشيني", "cat": "Crepes", "price": 45}, {"id": "i020", "name": "Classic Waffle", "ar": "وافل كلاسيك", "cat": "Waffles", "price": 27}, {"id": "i021", "name": "Strawberry Waffles", "ar": "وافل فراولة", "cat": "Waffles", "price": 39}, {"id": "i022", "name": "Mix Fruit Waffle", "ar": "وافل فواكه مشكلة", "cat": "Waffles", "price": 45}, {"id": "i023", "name": "Mix Berry Waffle", "ar": "وافل توت مشكل", "cat": "Waffles", "price": 45}, {"id": "i024", "name": "Belgium Waffle", "ar": "وافل بلجيكي", "cat": "Waffles", "price": 45}, {"id": "i025", "name": "Lotus Waffle", "ar": "وافل لوتس", "cat": "Waffles", "price": 45}, {"id": "i026", "name": "Pistachio Waffle", "ar": "وافل فستق", "cat": "Waffles", "price": 45}, {"id": "i027", "name": "Arch Waffle", "ar": "وافل آرش", "cat": "Waffles", "price": 49}, {"id": "i028", "name": "Mushroom Cheese Omelette", "ar": "أومليت فطر وجبن", "cat": "Eggs & Breakfast", "price": 29}, {"id": "i029", "name": "Mixed Veg Omelette", "ar": "أومليت خضار مشكلة", "cat": "Eggs & Breakfast", "price": 29}, {"id": "i030", "name": "Cheese Omelette", "ar": "أومليت جبن", "cat": "Eggs & Breakfast", "price": 29}, {"id": "i031", "name": "White Omelette", "ar": "أومليت بياض البيض", "cat": "Eggs & Breakfast", "price": 29}, {"id": "i032", "name": "Poached Egg", "ar": "بيض مسلوق (بوشيه)", "cat": "Eggs & Breakfast", "price": 29}, {"id": "i033", "name": "Fried Egg", "ar": "بيض مقلي", "cat": "Eggs & Breakfast", "price": 29}, {"id": "i034", "name": "Egg Benedict", "ar": "بيض بنديكت", "cat": "Eggs & Breakfast", "price": 29}, {"id": "i035", "name": "Egg Florentine", "ar": "بيض فلورنتين", "cat": "Eggs & Breakfast", "price": 29}, {"id": "i036", "name": "Crepe Omelette", "ar": "كريب أومليت", "cat": "Eggs & Breakfast", "price": 29}, {"id": "i037", "name": "Egg Roll Wrap", "ar": "راب بيض", "cat": "Eggs & Breakfast", "price": 29}, {"id": "i038", "name": "Fatayer Zaatar", "ar": "فطاير زعتر", "cat": "Eggs & Breakfast", "price": 18}, {"id": "i039", "name": "Three Kinds of Cheese", "ar": "ثلاثة أنواع جبن", "cat": "Eggs & Breakfast", "price": 25}, {"id": "i040", "name": "Labnah Zaatar", "ar": "لبنة بالزعتر", "cat": "Eggs & Breakfast", "price": 18}, {"id": "i041", "name": "Labnah Honey", "ar": "لبنة بالعسل", "cat": "Eggs & Breakfast", "price": 21}, {"id": "i042", "name": "Kibdah Saj (Liver)", "ar": "كبدة صاج", "cat": "Arabic Breakfast", "price": 24}, {"id": "i043", "name": "Fattah Hummus Shami", "ar": "فتة حمص شامية", "cat": "Arabic Breakfast", "price": 24}, {"id": "i044", "name": "Turkish Shakshuka", "ar": "شكشوكة تركية", "cat": "Arabic Breakfast", "price": 22}, {"id": "i045", "name": "Halloumi Tagine", "ar": "طاجن حلومي", "cat": "Arabic Breakfast", "price": 18}, {"id": "i046", "name": "Foul", "ar": "فول", "cat": "Arabic Breakfast", "price": 18}, {"id": "i047", "name": "Eggplant Fattah", "ar": "فتة باذنجان", "cat": "Arabic Breakfast", "price": 24}, {"id": "i048", "name": "Foul Shami", "ar": "فول شامي", "cat": "Arabic Breakfast", "price": 21}, {"id": "i049", "name": "Hummus with Liver", "ar": "حمص بالكبدة", "cat": "Arabic Breakfast", "price": 22}, {"id": "i050", "name": "Breakfast for 1", "ar": "فطور لشخص", "cat": "Arabic Breakfast", "price": 49}, {"id": "i051", "name": "Breakfast for 2", "ar": "فطور لشخصين", "cat": "Arabic Breakfast", "price": 69}, {"id": "i052", "name": "Breakfast for 3", "ar": "فطور لـ 3 أشخاص", "cat": "Arabic Breakfast", "price": 89}, {"id": "i053", "name": "Friends Breakfast", "ar": "فطور الأصدقاء", "cat": "Arabic Breakfast", "price": 129}, {"id": "i054", "name": "French Fries", "ar": "بطاطس مقلية", "cat": "Appetizers", "price": 25}, {"id": "i055", "name": "Cheesy Potato Wedges", "ar": "ويدجز بطاطس بالجبن", "cat": "Appetizers", "price": 35}, {"id": "i056", "name": "Cheesy Chicken Croquettes", "ar": "كروكيت دجاج بالجبن", "cat": "Appetizers", "price": 35}, {"id": "i057", "name": "Dynamite Shrimp", "ar": "روبيان دينامايت", "cat": "Appetizers", "price": 45}, {"id": "i058", "name": "Dynamite Chicken", "ar": "دجاج دينامايت", "cat": "Appetizers", "price": 39}, {"id": "i059", "name": "Mozzarella Sticks", "ar": "أصابع موزاريلا", "cat": "Appetizers", "price": 29}, {"id": "i060", "name": "Chicken Nuggets", "ar": "ناجتس دجاج", "cat": "Appetizers", "price": 29}, {"id": "i061", "name": "Chicken Strips with Fries", "ar": "ستربس دجاج مع بطاطس", "cat": "Appetizers", "price": 35}, {"id": "i062", "name": "Hot Wings", "ar": "أجنحة دجاج حارة", "cat": "Appetizers", "price": 35}, {"id": "i063", "name": "Mushroom Soup", "ar": "شوربة فطر", "cat": "Soups", "price": 24}, {"id": "i064", "name": "Broccoli Soup", "ar": "شوربة بروكلي", "cat": "Soups", "price": 24}, {"id": "i065", "name": "Chicken Caesar Salad", "ar": "سلطة سيزر دجاج", "cat": "Salads", "price": 35}, {"id": "i066", "name": "Cilantro Salad", "ar": "سلطة كزبرة", "cat": "Salads", "price": 35}, {"id": "i067", "name": "Rocca Berry Salad", "ar": "سلطة جرجير بالتوت", "cat": "Salads", "price": 35}, {"id": "i068", "name": "Greek Salad", "ar": "سلطة يونانية", "cat": "Salads", "price": 35}, {"id": "i069", "name": "Halloumi Avocado Salad", "ar": "سلطة حلومي وأفوكادو", "cat": "Salads", "price": 35}, {"id": "i070", "name": "Yogurt Fattoush", "ar": "فتوش بالزبادي", "cat": "Salads", "price": 35}, {"id": "i071", "name": "Roasted Veg Salad", "ar": "سلطة خضار مشوية", "cat": "Salads", "price": 35}, {"id": "i072", "name": "Margherita Pizza", "ar": "بيتزا مارغريتا", "cat": "Pizza", "price": 35}, {"id": "i073", "name": "Pepperoni Pizza", "ar": "بيتزا بيبروني", "cat": "Pizza", "price": 39}, {"id": "i074", "name": "Veggie Pizza", "ar": "بيتزا خضار", "cat": "Pizza", "price": 35}, {"id": "i075", "name": "BBQ Pizza", "ar": "بيتزا باربكيو", "cat": "Pizza", "price": 39}, {"id": "i076", "name": "Dynamite Pizza", "ar": "بيتزا دينامايت", "cat": "Pizza", "price": 39}, {"id": "i077", "name": "Ranch Pizza", "ar": "بيتزا رانش", "cat": "Pizza", "price": 39}, {"id": "i078", "name": "Flag Pesto Pizza", "ar": "بيتزا فلاج بيستو", "cat": "Pizza", "price": 39}, {"id": "i079", "name": "Chicken Avocado Sandwich", "ar": "ساندويتش دجاج بالأفوكادو", "cat": "Sandwiches", "price": 35}, {"id": "i080", "name": "Cheesy Chicken Sandwich", "ar": "ساندويتش دجاج بالجبن", "cat": "Sandwiches", "price": 35}, {"id": "i081", "name": "Beef Steak Sandwich", "ar": "ساندويتش ستيك لحم", "cat": "Sandwiches", "price": 39}, {"id": "i082", "name": "Chicken Shawarma Crepe", "ar": "كريب شاورما دجاج", "cat": "Sandwiches", "price": 35}, {"id": "i083", "name": "Halloumi Sandwich", "ar": "ساندويتش حلومي", "cat": "Sandwiches", "price": 35}, {"id": "i084", "name": "Mini Burger Chicken", "ar": "ميني برجر دجاج", "cat": "Burgers", "price": 35}, {"id": "i085", "name": "Mini Burger Beef", "ar": "ميني برجر لحم", "cat": "Burgers", "price": 39}, {"id": "i086", "name": "Mixed Slider Burger", "ar": "سلايدر برجر مشكل", "cat": "Burgers", "price": 39}, {"id": "i087", "name": "Beef Burger", "ar": "برجر لحم", "cat": "Burgers", "price": 39}, {"id": "i088", "name": "Mushroom Beef Burger", "ar": "برجر لحم بالفطر", "cat": "Burgers", "price": 39}, {"id": "i089", "name": "Fried Chicken Burger", "ar": "برجر دجاج مقرمش", "cat": "Burgers", "price": 35}, {"id": "i090", "name": "Chicken Burger", "ar": "برجر دجاج", "cat": "Burgers", "price": 35}, {"id": "i091", "name": "Mixed Vegetable Pasta", "ar": "باستا خضار مشكلة", "cat": "Pasta", "price": 35}, {"id": "i092", "name": "Chicken Florentine Pesto", "ar": "باستا دجاج بيستو فلورنتين", "cat": "Pasta", "price": 39}, {"id": "i093", "name": "Arrabbiata Chicken", "ar": "باستا أرابياتا دجاج", "cat": "Pasta", "price": 39}, {"id": "i094", "name": "Shrimp alla Funghi", "ar": "باستا روبيان بالفطر", "cat": "Pasta", "price": 45}, {"id": "i095", "name": "Biryani Shrimp", "ar": "برياني روبيان", "cat": "Main Course", "price": 55}, {"id": "i096", "name": "Biryani Chicken", "ar": "برياني دجاج", "cat": "Main Course", "price": 45}, {"id": "i097", "name": "Butter Chicken", "ar": "بتر تشكن", "cat": "Main Course", "price": 49}, {"id": "i098", "name": "Chicken Teriyaki", "ar": "دجاج ترياكي", "cat": "Main Course", "price": 45}, {"id": "i099", "name": "Beef Teppanyaki", "ar": "لحم تيبانياكي", "cat": "Main Course", "price": 49}, {"id": "i100", "name": "BBQ Chicken", "ar": "دجاج باربكيو", "cat": "Main Course", "price": 45}, {"id": "i101", "name": "Pollo Funghi", "ar": "دجاج بالفطر (بولو فونجي)", "cat": "Main Course", "price": 45}, {"id": "i102", "name": "Beef Steak", "ar": "ستيك لحم", "cat": "Main Course", "price": 89}, {"id": "i103", "name": "Grilled Salmon with Lemon Butter Sauce", "ar": "سلمون مشوي بصوص الليمون والزبدة", "cat": "Main Course", "price": 85}, {"id": "i104", "name": "Chicken Chilly Rice", "ar": "أرز دجاج بالفلفل الحار", "cat": "Main Course", "price": 45}, {"id": "i105", "name": "Arabic Coffee", "ar": "قهوة عربية", "cat": "Hot Drinks", "price": 27}, {"id": "i106", "name": "Turkish Coffee", "ar": "قهوة تركية", "cat": "Hot Drinks", "price": 14}, {"id": "i107", "name": "Espresso", "ar": "إسبريسو", "cat": "Hot Drinks", "price": 14}, {"id": "i108", "name": "Italian Cappuccino", "ar": "كابتشينو إيطالي", "cat": "Hot Drinks", "price": 19}, {"id": "i109", "name": "French Latte", "ar": "لاتيه فرنسي", "cat": "Hot Drinks", "price": 17}, {"id": "i110", "name": "American Brewed Coffee", "ar": "قهوة أمريكانو", "cat": "Hot Drinks", "price": 16}, {"id": "i111", "name": "Caramel Macchiato", "ar": "كراميل ماكياتو", "cat": "Hot Drinks", "price": 19}, {"id": "i112", "name": "Cafe Mocha", "ar": "كافيه موكا", "cat": "Hot Drinks", "price": 21}, {"id": "i113", "name": "Rose Latte", "ar": "لاتيه بالورد", "cat": "Hot Drinks", "price": 19}, {"id": "i114", "name": "Flat White", "ar": "فلات وايت", "cat": "Hot Drinks", "price": 19}, {"id": "i115", "name": "Spanish Latte (Hot)", "ar": "سبانش لاتيه (حار)", "cat": "Hot Drinks", "price": 19}, {"id": "i116", "name": "Affogato", "ar": "أفوغاتو", "cat": "Hot Drinks", "price": 19}, {"id": "i117", "name": "Café Cortado", "ar": "كورتادو", "cat": "Hot Drinks", "price": 17}, {"id": "i118", "name": "Cinnamon Latte", "ar": "لاتيه بالقرفة", "cat": "Hot Drinks", "price": 19}, {"id": "i119", "name": "Hario V60", "ar": "V60", "cat": "Hot Drinks", "price": 19}, {"id": "i120", "name": "Green Tea", "ar": "شاي أخضر", "cat": "Hot Drinks", "price": 6}, {"id": "i121", "name": "Black Tea", "ar": "شاي أحمر", "cat": "Hot Drinks", "price": 6}, {"id": "i122", "name": "Karak Tea", "ar": "شاي كرك", "cat": "Hot Drinks", "price": 8}, {"id": "i123", "name": "Cold Coffee", "ar": "قهوة باردة", "cat": "Iced Beverages", "price": 23}, {"id": "i124", "name": "Americano on Ice", "ar": "أمريكانو بارد", "cat": "Iced Beverages", "price": 17}, {"id": "i125", "name": "Mocha on Ice", "ar": "موكا باردة", "cat": "Iced Beverages", "price": 21}, {"id": "i126", "name": "Cappuccino on Ice", "ar": "كابتشينو بارد", "cat": "Iced Beverages", "price": 19}, {"id": "i127", "name": "French Latte on Ice", "ar": "لاتيه فرنسي بارد", "cat": "Iced Beverages", "price": 19}, {"id": "i128", "name": "Chocolate on Ice", "ar": "شوكولاتة باردة", "cat": "Iced Beverages", "price": 19}, {"id": "i129", "name": "Caramel Macchiato on Ice", "ar": "كراميل ماكياتو بارد", "cat": "Iced Beverages", "price": 19}, {"id": "i130", "name": "Spanish Latte (Iced)", "ar": "سبانش لاتيه بارد", "cat": "Iced Beverages", "price": 19}, {"id": "i131", "name": "Rose Latte on Ice", "ar": "لاتيه بالورد بارد", "cat": "Iced Beverages", "price": 19}, {"id": "i132", "name": "Blue Sky", "ar": "بلو سكاي", "cat": "Iced Beverages", "price": 19}, {"id": "i133", "name": "Titoos on Ice", "ar": "تيتوز بارد", "cat": "Iced Beverages", "price": 25}, {"id": "i134", "name": "Funky Smoothies", "ar": "سموذي فانكي", "cat": "Iced Beverages", "price": 22}, {"id": "i135", "name": "Berry Yogurt Smoothies", "ar": "سموذي توت بالزبادي", "cat": "Iced Beverages", "price": 22}, {"id": "i136", "name": "Matcha on Ice", "ar": "ماتشا باردة", "cat": "Iced Beverages", "price": 19}, {"id": "i137", "name": "V60 on Ice", "ar": "V60 بارد", "cat": "Iced Beverages", "price": 19}, {"id": "i138", "name": "Vanilla Milkshake", "ar": "ميلك شيك فانيلا", "cat": "Milkshakes", "price": 23}, {"id": "i139", "name": "Chocolate Milkshake", "ar": "ميلك شيك شوكولاتة", "cat": "Milkshakes", "price": 23}, {"id": "i140", "name": "Strawberry Milkshake", "ar": "ميلك شيك فراولة", "cat": "Milkshakes", "price": 23}, {"id": "i141", "name": "Pistachio Milkshake", "ar": "ميلك شيك فستق", "cat": "Milkshakes", "price": 25}, {"id": "i142", "name": "Oreo Milkshake", "ar": "ميلك شيك أوريو", "cat": "Milkshakes", "price": 25}, {"id": "i143", "name": "Lotus Milkshake", "ar": "ميلك شيك لوتس", "cat": "Milkshakes", "price": 25}, {"id": "i144", "name": "Kinder Milkshake", "ar": "ميلك شيك كيندر", "cat": "Milkshakes", "price": 26}, {"id": "i145", "name": "Mix Berry Milkshake", "ar": "ميلك شيك توت مشكل", "cat": "Milkshakes", "price": 25}, {"id": "i146", "name": "Orange Juice", "ar": "عصير برتقال", "cat": "Fresh Juices", "price": 19}, {"id": "i147", "name": "Lemon Mint Juice", "ar": "عصير ليمون بالنعناع", "cat": "Fresh Juices", "price": 19}, {"id": "i148", "name": "Watermelon Juice", "ar": "عصير بطيخ", "cat": "Fresh Juices", "price": 19}, {"id": "i149", "name": "Carrot Juice", "ar": "عصير جزر", "cat": "Fresh Juices", "price": 19}, {"id": "i150", "name": "Avocado Juice", "ar": "عصير أفوكادو", "cat": "Fresh Juices", "price": 21}, {"id": "i151", "name": "Mango Juice", "ar": "عصير مانجو", "cat": "Fresh Juices", "price": 19}, {"id": "i152", "name": "Strawberry Juice", "ar": "عصير فراولة", "cat": "Fresh Juices", "price": 19}, {"id": "i153", "name": "Banana Juice", "ar": "عصير موز", "cat": "Fresh Juices", "price": 19}, {"id": "i154", "name": "Pineapple Juice", "ar": "عصير أناناس", "cat": "Fresh Juices", "price": 19}, {"id": "i155", "name": "Cocktail Juice", "ar": "عصير كوكتيل", "cat": "Fresh Juices", "price": 21}, {"id": "i156a", "name": "Mojito (7UP)", "ar": "موهيتو", "cat": "Mojito", "price": 19}, {"id": "i156b", "name": "Mojito (Code Red)", "ar": "موهيتو", "cat": "Mojito", "price": 22}, {"id": "i156c", "name": "Mojito (Red Bull)", "ar": "موهيتو", "cat": "Mojito", "price": 24}, {"id": "i157a", "name": "Summer Mojito (7UP)", "ar": "موهيتو صيفي", "cat": "Mojito", "price": 19}, {"id": "i157b", "name": "Summer Mojito (Code Red)", "ar": "موهيتو صيفي", "cat": "Mojito", "price": 22}, {"id": "i157c", "name": "Summer Mojito (Red Bull)", "ar": "موهيتو صيفي", "cat": "Mojito", "price": 24}, {"id": "i158a", "name": "Peach Mojito (7UP)", "ar": "موهيتو خوخ", "cat": "Mojito", "price": 19}, {"id": "i158b", "name": "Peach Mojito (Code Red)", "ar": "موهيتو خوخ", "cat": "Mojito", "price": 22}, {"id": "i158c", "name": "Peach Mojito (Red Bull)", "ar": "موهيتو خوخ", "cat": "Mojito", "price": 24}, {"id": "i159a", "name": "Classic Mojito (7UP)", "ar": "موهيتو كلاسيك", "cat": "Mojito", "price": 19}, {"id": "i159b", "name": "Classic Mojito (Code Red)", "ar": "موهيتو كلاسيك", "cat": "Mojito", "price": 22}, {"id": "i159c", "name": "Classic Mojito (Red Bull)", "ar": "موهيتو كلاسيك", "cat": "Mojito", "price": 24}, {"id": "i160a", "name": "Blueberry Mojito (7UP)", "ar": "موهيتو توت أزرق", "cat": "Mojito", "price": 19}, {"id": "i160b", "name": "Blueberry Mojito (Code Red)", "ar": "موهيتو توت أزرق", "cat": "Mojito", "price": 22}, {"id": "i160c", "name": "Blueberry Mojito (Red Bull)", "ar": "موهيتو توت أزرق", "cat": "Mojito", "price": 24}, {"id": "i161a", "name": "Pomegranate Mojito (7UP)", "ar": "موهيتو رمان", "cat": "Mojito", "price": 19}, {"id": "i161b", "name": "Pomegranate Mojito (Code Red)", "ar": "موهيتو رمان", "cat": "Mojito", "price": 22}, {"id": "i161c", "name": "Pomegranate Mojito (Red Bull)", "ar": "موهيتو رمان", "cat": "Mojito", "price": 24}, {"id": "i162a", "name": "Raspberry Mojito (7UP)", "ar": "موهيتو توت العليق", "cat": "Mojito", "price": 19}, {"id": "i162b", "name": "Raspberry Mojito (Code Red)", "ar": "موهيتو توت العليق", "cat": "Mojito", "price": 22}, {"id": "i162c", "name": "Raspberry Mojito (Red Bull)", "ar": "موهيتو توت العليق", "cat": "Mojito", "price": 24}, {"id": "i163a", "name": "Cherry Mojito (7UP)", "ar": "موهيتو كرز", "cat": "Mojito", "price": 19}, {"id": "i163b", "name": "Cherry Mojito (Code Red)", "ar": "موهيتو كرز", "cat": "Mojito", "price": 22}, {"id": "i163c", "name": "Cherry Mojito (Red Bull)", "ar": "موهيتو كرز", "cat": "Mojito", "price": 24}, {"id": "i164a", "name": "Strawberry Mojito (7UP)", "ar": "موهيتو فراولة", "cat": "Mojito", "price": 19}, {"id": "i164b", "name": "Strawberry Mojito (Code Red)", "ar": "موهيتو فراولة", "cat": "Mojito", "price": 22}, {"id": "i164c", "name": "Strawberry Mojito (Red Bull)", "ar": "موهيتو فراولة", "cat": "Mojito", "price": 24}, {"id": "i165a", "name": "Kiwi Mojito (7UP)", "ar": "موهيتو كيوي", "cat": "Mojito", "price": 19}, {"id": "i165b", "name": "Kiwi Mojito (Code Red)", "ar": "موهيتو كيوي", "cat": "Mojito", "price": 22}, {"id": "i165c", "name": "Kiwi Mojito (Red Bull)", "ar": "موهيتو كيوي", "cat": "Mojito", "price": 24}, {"id": "i166a", "name": "Mixberry Mojito (7UP)", "ar": "موهيتو توت مشكل", "cat": "Mojito", "price": 19}, {"id": "i166b", "name": "Mixberry Mojito (Code Red)", "ar": "موهيتو توت مشكل", "cat": "Mojito", "price": 22}, {"id": "i166c", "name": "Mixberry Mojito (Red Bull)", "ar": "موهيتو توت مشكل", "cat": "Mojito", "price": 24}, {"id": "i167a", "name": "Special Mojito (7UP)", "ar": "موهيتو سبيشل", "cat": "Mojito", "price": 19}, {"id": "i167b", "name": "Special Mojito (Code Red)", "ar": "موهيتو سبيشل", "cat": "Mojito", "price": 22}, {"id": "i167c", "name": "Special Mojito (Red Bull)", "ar": "موهيتو سبيشل", "cat": "Mojito", "price": 24}, {"id": "i168", "name": "Karkade on Ice", "ar": "كركديه بارد", "cat": "Mojito", "price": 17}, {"id": "i169", "name": "Peach Iced Tea", "ar": "شاي مثلج خوخ", "cat": "Mojito", "price": 19}, {"id": "i170", "name": "Lemon Iced Tea", "ar": "شاي مثلج ليمون", "cat": "Mojito", "price": 19}, {"id": "i171", "name": "Strawberry Iced Tea", "ar": "شاي مثلج فراولة", "cat": "Mojito", "price": 19}, {"id": "i172", "name": "Oska Water", "ar": "مياه أوسكا", "cat": "Soft Drinks", "price": 4}, {"id": "i173", "name": "Pepsi", "ar": "بيبسي", "cat": "Soft Drinks", "price": 6}, {"id": "i174", "name": "Diet Pepsi", "ar": "بيبسي دايت", "cat": "Soft Drinks", "price": 6}, {"id": "i175", "name": "7 Up", "ar": "سفن أب", "cat": "Soft Drinks", "price": 6}, {"id": "i176", "name": "Code Red", "ar": "كود ريد", "cat": "Soft Drinks", "price": 10}, {"id": "i177", "name": "Red Bull", "ar": "ريد بول", "cat": "Soft Drinks", "price": 15}, {"id": "i178", "name": "Vanilla Ice Cream", "ar": "آيس كريم فانيلا", "cat": "Ice Cream", "price": 21}, {"id": "i179", "name": "Chocolate Ice Cream", "ar": "آيس كريم شوكولاتة", "cat": "Ice Cream", "price": 21}, {"id": "i180", "name": "Strawberry Ice Cream", "ar": "آيس كريم فراولة", "cat": "Ice Cream", "price": 21}, {"id": "i181", "name": "Tricolour Ice Cream", "ar": "آيس كريم ثلاث نكهات", "cat": "Ice Cream", "price": 21}, {"id": "i182", "name": "Tiramisu Cheese Cake", "ar": "تشيز كيك تيراميسو", "cat": "Arch View Cakes", "price": 19}, {"id": "i183", "name": "Blueberry Cheese Cake", "ar": "تشيز كيك توت أزرق", "cat": "Arch View Cakes", "price": 19}, {"id": "i184", "name": "San Sebastian Cheese Cake", "ar": "تشيز كيك سان سيباستيان", "cat": "Arch View Cakes", "price": 19}, {"id": "i185", "name": "Carrot Cake", "ar": "كيك جزر", "cat": "Arch View Cakes", "price": 19}, {"id": "i186", "name": "Chocolate Cake", "ar": "كيك شوكولاتة", "cat": "Arch View Cakes", "price": 19}, {"id": "i187", "name": "Red Velvet Cake", "ar": "كيك رد فلفت", "cat": "Arch View Cakes", "price": 19}, {"id": "i188", "name": "Kunafa Cake (all flavours)", "ar": "كيك كنافة (جميع النكهات)", "cat": "Arch View Cakes", "price": 19}, {"id": "i189", "name": "Basbousa Cake (all flavours)", "ar": "كيك بسبوسة (جميع النكهات)", "cat": "Arch View Cakes", "price": 19}]};
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const SR=n=>'SR '+Math.round(n).toLocaleString('en');
+const catOf={}; MENU.items.forEach(i=>catOf[i.id]=i.cat);
+const groupOf={}; MENU.groups.forEach(g=>g.cats.forEach(c=>groupOf[c]=g.name));
+
+/* ---------- data layer (Supabase) ---------- */
+const CFG=window.ARCH_CONFIG||{};
+const sb=window.supabase.createClient(CFG.SUPABASE_URL||'https://x.supabase.co',CFG.SUPABASE_ANON_KEY||'x');
+let me=null,orders=[],zTotals={},customers=[],profiles={};
+const dayKey=d=>{const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');};
+const today=new Date(); today.setHours(0,0,0,0);
+const byName=id=>profiles[id]?.name||'Staff';
+function rebuild(rows){
+  orders=rows.map(r=>({id:r.id,at:new Date(r.at),phone:r.phone,name:r.name||'',type:r.type,pay:r.pay,src:r.src,status:r.status,total:+r.total,lines:r.lines,by:r.by}));
+  orders.sort((a,b)=>b.at-a.at);
+  const seen={};customers=[];orders.forEach(o=>{if(!seen[o.phone]){seen[o.phone]=1;customers.push({name:o.name||'',phone:o.phone});}else{const c=customers.find(c=>c.phone===o.phone);if(o.name&&!c.name)c.name=o.name;}});
+}
+function liveOrders(){return orders.filter(o=>o.status!=='void');}
+async function loadAll(){
+  const start=new Date(today);start.setDate(start.getDate()-59);
+  const [o,z,p]=await Promise.all([
+    sb.from('orders').select('*').gte('at',start.toISOString()).order('at',{ascending:false}).limit(5000),
+    sb.from('z_totals').select('day,total'),
+    sb.from('profiles').select('id,name,role')]);
+  if(o.error)throw o.error;
+  rebuild(o.data||[]);zTotals={};(z.data||[]).forEach(r=>zTotals[r.day]=+r.total);profiles={};(p.data||[]).forEach(r=>profiles[r.id]=r);
+  $('#live').innerHTML='<span class="dot"></span>Live';refreshView();
+}
+let reloadT=null;const scheduleReload=()=>{clearTimeout(reloadT);reloadT=setTimeout(()=>loadAll().catch(()=>{}),400);};
+async function afterLogin(session){
+  const {data:prof}=await sb.from('profiles').select('id,name,role').eq('id',session.user.id).single();
+  me={id:session.user.id,name:(prof&&prof.name)||session.user.email.split('@')[0],role:(prof&&prof.role)||'staff'};
+  await loadAll();
+  sb.channel('live').on('postgres_changes',{event:'*',schema:'public',table:'orders'},scheduleReload).on('postgres_changes',{event:'*',schema:'public',table:'z_totals'},scheduleReload).subscribe();
+  enter();
+}
+async function boot(){
+  if(!CFG.SUPABASE_URL||CFG.SUPABASE_URL.includes('YOUR-PROJECT')){$('#loginErr').textContent='config.js is not filled in yet (Supabase URL and anon key).';$('#loginBtn').disabled=true;return;}
+  const {data:{session}}=await sb.auth.getSession();
+  if(session)afterLogin(session).catch(e=>{$('#loginErr').textContent='Could not load data: '+(e.message||e);});
+  sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT')location.reload();});
+}
+$('#loginForm').onsubmit=async e=>{e.preventDefault();const b=$('#loginBtn');b.disabled=true;$('#loginErr').textContent='';
+  const {data,error}=await sb.auth.signInWithPassword({email:$('#email').value.trim(),password:$('#password').value});
+  if(error){$('#loginErr').textContent=error.message==='Invalid login credentials'?'Wrong email or password.':error.message;b.disabled=false;return;}
+  try{await afterLogin(data.session);}catch(err){$('#loginErr').textContent='Signed in, but could not load data: '+(err.message||err);b.disabled=false;}};
+async function saveOrder(o){const {error}=await sb.from('orders').insert({id:o.id,at:o.at.toISOString(),phone:o.phone,name:o.name,type:o.type,pay:o.pay,src:o.src,status:'ok',total:o.total,lines:o.lines,by:me.id});if(error)throw error;scheduleReload();}
+async function voidOrder(o){const {error}=await sb.from('orders').update({status:'void',void_by:me.id}).eq('id',o.id);if(error)throw error;scheduleReload();}
+async function saveZ(date,amount){const {error}=await sb.from('z_totals').upsert({day:date,total:amount,by:me.id,updated_at:new Date().toISOString()});if(error)throw error;scheduleReload();}
+async function setRole(id,role){const {error}=await sb.from('profiles').update({role}).eq('id',id);if(error)throw error;scheduleReload();}
+
+/* ---------- auth / shell ---------- */
+$('#logout').onclick=async()=>{await sb.auth.signOut();location.reload();};
+function enter(){
+  $('#login').classList.add('hidden');$('#main').classList.remove('hidden');
+  $('#whoName').textContent=me.name;$('#avatar').textContent=me.name[0].toUpperCase();$('#avatarM').textContent=me.name[0].toUpperCase();$('#whoRole').textContent=me.role==='manager'?'Manager':'Staff';
+  const hr=new Date().getHours();$('#greet').textContent=(hr<12?'Good morning':hr<17?'Good afternoon':'Good evening')+', '+me.name;
+  $$('.tab.mgr').forEach(t=>t.classList.toggle('hidden',me.role!=='manager'));
+  $('#zSave').disabled=me.role!=='manager';
+  const pre=readPrefill();
+  show(pre?'order':me.role==='manager'?'dash':'order');
+}
+let current='order';
+function show(v){current=v;$$('.tab').forEach(t=>t.classList.toggle('on',t.dataset.view===v));$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));refreshView();window.scrollTo(0,0);}
+function refreshView(){if(!me)return;if(current==='orders')renderOrders();if(current==='dash')renderDash();if(current==='items')renderItems();if(current==='customers')renderCustomers();if(current==='settings')renderUsers();}
+$$('.tab').forEach(t=>t.onclick=()=>show(t.dataset.view));
+function toast(m){const t=$('#toast');$('#toastMsg').textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2200);}
+function renderUsers(){const rows=Object.values(profiles).sort((a,b)=>a.name.localeCompare(b.name));
+  $('#usersTbl tbody').innerHTML=rows.map(p=>`<tr><td><span class="avatar" style="width:28px;height:28px;font-size:11px;display:inline-grid;vertical-align:middle;margin-right:8px">${esc((p.name||'?')[0].toUpperCase())}</span>${esc(p.name)}${p.id===me.id?' <span class="caption">(you)</span>':''}</td><td><span class="tag ${p.role==='manager'?'rep':''}">${p.role==='manager'?'Manager':'Staff'}</span></td><td>${me.role==='manager'&&p.id!==me.id?`<button class="rowact" data-role="${p.id}" data-to="${p.role==='manager'?'staff':'manager'}">Make ${p.role==='manager'?'staff':'manager'}</button>`:''}</td></tr>`).join('')||'<tr><td colspan="3" class="caption">No users yet.</td></tr>';
+  $$('#usersTbl [data-role]').forEach(b=>b.onclick=async()=>{try{await setRole(b.dataset.role,b.dataset.to);toast('Role updated');}catch(e){toast('Could not update role');}});}
+
+/* ---------- prefill from the menu's WhatsApp link: #o-<code>-<P|D>-<idx>x<qty>-... ---------- */
+let prefillCode=null;
+function readPrefill(){
+  const h=(location.hash||'').replace(/^#/,'');if(!h.startsWith('o-'))return false;
+  const p=h.split('-');const code=p[1],type=p[2]==='D'?'Delivery':'Pickup';cart=[];
+  p.slice(3).forEach(t=>{const m=/^(\d+)([abc]?)x(\d+)$/.exec(t);if(!m)return;const id='i'+String(+m[1]+1).padStart(3,'0')+m[2];const it=MENU.items.find(i=>i.id===id);if(it)cart.push({id,name:it.name,price:it.price,qty:+m[3]});});
+  if(!cart.length)return false;
+  prefillCode=code;otype=type;$$('#otype .chip').forEach(x=>x.classList.toggle('on',x.dataset.v===type));
+  $('#prefill').classList.remove('hidden');$('#prefillTxt').textContent='Order #'+code+' from the menu. Add the customer\'s number and confirm.';
+  renderCart();$('#save').lastChild.textContent='Confirm order #'+code;
+  try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+  return true;
+}
+
+/* ---------- order form ---------- */
+let cat='Pancakes', cart=[], otype='Pickup', pay='Cash';
+function renderCats(){$('#cats').innerHTML=MENU.groups.flatMap(g=>g.cats).map(c=>`<button class="chip ${c===cat?'on':''}" data-c="${c}">${c}</button>`).join('');$$('#cats .chip').forEach(b=>b.onclick=()=>{cat=b.dataset.c;$('#search').value='';renderCats();renderItems2();});}
+function renderItems2(){const q=$('#search').value.trim().toLowerCase();const list=q?MENU.items.filter(i=>i.name.toLowerCase().includes(q)||i.ar.includes(q)):MENU.items.filter(i=>i.cat===cat);
+  $('#items').innerHTML=list.map(i=>`<button class="item" data-id="${i.id}"><b>${i.name}</b><span class="ar">${i.ar}</span><span class="price">SR ${i.price}</span></button>`).join('')||'<div class="empty">No items match</div>';
+  $$('#items .item').forEach(b=>b.onclick=()=>{add(b.dataset.id);b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');});}
+function add(id){const it=MENU.items.find(i=>i.id===id);const ex=cart.find(l=>l.id===id);ex?ex.qty++:cart.push({id,name:it.name,price:it.price,qty:1});renderCart();}
+function renderCart(){const n=cart.reduce((a,l)=>a+l.qty,0);$('#cartCnt').textContent=n+(n===1?' item':' items');if(!cart.length){$('#lines').innerHTML='<div class="empty"><svg><use href="#i-bag"/></svg>No items yet — tap an item to add it</div>';}else $('#lines').innerHTML=cart.map(l=>`<div class="line"><span class="n">${l.name}<br><span class="caption">SR ${l.price} each</span></span><span class="qty"><button data-id="${l.id}" data-d="-1">−</button><b>${l.qty}</b><button data-id="${l.id}" data-d="1">+</button></span><span class="price">SR ${l.price*l.qty}</span></div>`).join('');
+  $$('#lines .qty button').forEach(b=>b.onclick=()=>{const l=cart.find(x=>x.id===b.dataset.id);l.qty+=+b.dataset.d;if(l.qty<=0)cart=cart.filter(x=>x!==l);renderCart();});
+  $('#total').textContent=SR(cart.reduce((a,l)=>a+l.price*l.qty,0));}
+$('#search').oninput=renderItems2;
+$('#phone').oninput=()=>{const p=$('#phone').value.replace(/\D/g,'');const c=customers.find(x=>x.phone===p);const n=liveOrders().filter(o=>o.phone===p).length;$('#phoneHint').innerHTML=c?`<span class="tag rep">Repeat customer</span> ${c.name} · ${n} previous orders`:(p.length>=10?'<span class="tag new">New customer</span>':'');if(c&&!$('#cname').value)$('#cname').value=c.name;};
+$$('#otype .chip').forEach(b=>b.onclick=()=>{otype=b.dataset.v;$$('#otype .chip').forEach(x=>x.classList.toggle('on',x===b));});
+$$('#pay .chip').forEach(b=>b.onclick=()=>{pay=b.dataset.v;$$('#pay .chip').forEach(x=>x.classList.toggle('on',x===b));});
+$('#save').onclick=async()=>{const p=$('#phone').value.replace(/\D/g,'');if(!cart.length)return toast('Add at least one item');if(p.length<9)return toast('Enter the customer WhatsApp number');
+  const b=$('#save');b.disabled=true;
+  const o={id:(prefillCode||('S'+Date.now().toString(36).toUpperCase())),at:new Date(),phone:p,name:$('#cname').value.trim(),lines:cart,type:otype,pay,by:me.id,src:prefillCode?'menu':'staff',status:'ok',total:cart.reduce((a,l)=>a+l.price*l.qty,0)};
+  try{await saveOrder(o);cart=[];prefillCode=null;$('#prefill').classList.add('hidden');$('#save').lastChild.textContent='Save order';$('#phone').value='';$('#cname').value='';$('#phoneHint').textContent='';renderCart();toast('Order saved');}
+  catch(e){toast('Could not save: '+(e.message||'try again'));}
+  b.disabled=false;};
+renderCats();renderItems2();renderCart();
+
+/* ---------- orders ---------- */
+const fmtT=d=>d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+const fmtD=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+function renderOrders(){const list=orders.slice(0,200);
+  $('#ordersTbl tbody').innerHTML=list.map(o=>`<tr class="${o.status==='void'?'void':''}"><td>${fmtD(o.at)}<br><span class="caption">${fmtT(o.at)}</span></td><td>${esc(o.name)||'—'}<br><span class="caption">${o.phone}</span></td><td>${o.lines.map(l=>(l.qty>1?l.qty+'× ':'')+esc(l.name)).join(', ')}${o.src==='menu'?' <span class="tag rep">#'+esc(o.id)+'</span>':''}</td><td><span class="tag ${o.type==='Delivery'?'del':''}">${o.type}</span></td><td class="caption">${o.pay}</td><td class="num"><b>${SR(o.total)}</b></td><td class="caption">${esc(byName(o.by))}</td><td>${me.role==='manager'&&o.status!=='void'?`<button class="rowact" data-void="${o.id}">Void</button>`:o.status==='void'?'<span class="caption">voided</span>':''}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">No orders yet. Log the first one from New order.</td></tr>';
+  $$('#ordersTbl [data-void]').forEach(b=>b.onclick=async()=>{if(b.textContent!=='Sure?'){b.textContent='Sure?';setTimeout(()=>b.textContent='Void',2500);return;}const o=orders.find(x=>x.id===b.dataset.void);try{await voidOrder(o);toast('Order voided');}catch(e){toast('Could not void');}});}
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- dashboard (with drill-down filters) ---------- */
+let range='today';
+const F={day:null,hour:null,group:null,type:null,pay:null,item:null};
+const FL={day:'Day',hour:'Hour',group:'Category',type:'Type',pay:'Payment',item:'Item'};
+$$('[data-range]').forEach(b=>b.onclick=()=>{range=b.dataset.range;F.day=null;$$('[data-range]').forEach(x=>x.classList.toggle('on',x===b));renderDash();});
+const inRange=(o,days,offset=0)=>{const start=new Date(today);start.setDate(start.getDate()-(days-1)-offset);const end=new Date(today);end.setDate(end.getDate()-offset+1);return o.at>=start&&o.at<end;};
+const hh=h=>(h%12||12)+(h<12?' am':' pm');
+function setF(k,v){F[k]=(F[k]===v)?null:v;renderDash();$('#v-dash').scrollIntoView({behavior:'smooth',block:'start'});}
+function clearF(){Object.keys(F).forEach(k=>F[k]=null);renderDash();}
+function applyF(list,skip){return list.filter(o=>(skip==='day'||!F.day||o.at.toDateString()===F.day)&&(skip==='hour'||F.hour===null||o.at.getHours()===F.hour)&&(skip==='group'||!F.group||o.lines.some(l=>groupOf[catOf[l.id]]===F.group))&&(skip==='type'||!F.type||o.type===F.type)&&(skip==='pay'||!F.pay||o.pay===F.pay)&&(skip==='item'||!F.item||o.lines.some(l=>l.id===F.item)));}
+function delta(a,b){if(!b)return '';const p=Math.round((a-b)/b*100);return `<span class="pillc ${p>=0?'up':'down'}">${p>=0?'▲':'▼'} ${Math.abs(p)}%</span> <span class="muted">vs previous</span>`;}
+function renderDash(){
+  const days=range==='today'?1:+range;
+  const base=liveOrders().filter(o=>inRange(o,days)), prevBase=liveOrders().filter(o=>inRange(o,days,days));
+  const cur=applyF(base), prev=applyF(prevBase.map(o=>o).filter(o=>!F.day||true));
+  const any=Object.values(F).some(v=>v!==null&&v!==undefined);
+  $('#dashDate').textContent=(range==='today'?today.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'}):'Last '+days+' days')+' · WhatsApp orders only';
+  // filter bar
+  const chips=Object.entries(F).filter(([k,v])=>v!==null).map(([k,v])=>{const lab=k==='day'?fmtD(new Date(v)):k==='hour'?hh(v):k==='item'?MENU.items.find(i=>i.id===v)?.name:v;return `<button class="fchip" data-k="${k}"><span class="muted">${FL[k]}:</span> ${lab} <b>×</b></button>`;}).join('');
+  $('#fbar').innerHTML=any?`<span class="caption" style="font-weight:600">Filtered by</span>${chips}<button class="fchip clear" id="fclear">Clear all</button><span class="caption" style="margin-left:auto">${cur.length} of ${base.length} orders</span>`:`<span class="caption">Tip: click a bar, a row or an item to drill down. Filters stack.</span>`;
+  $$('#fbar .fchip[data-k]').forEach(b=>b.onclick=()=>{F[b.dataset.k]=null;renderDash();});if($('#fclear'))$('#fclear').onclick=clearF;
+  const sum=l=>l.reduce((a,o)=>a+o.total,0);const s=sum(cur),ps=sum(prev);
+  $('#kSales').textContent=SR(s);$('#kSalesD').innerHTML=any?`<span class="muted">${base.length?Math.round(s/sum(base)*100):0}% of period sales</span>`:delta(s,ps);
+  $('#kOrders').textContent=cur.length;$('#kOrdersD').innerHTML=any?`<span class="muted">of ${base.length} in period</span>`:delta(cur.length,prev.length);
+  $('#kAvg').textContent=cur.length?SR(s/cur.length):'—';$('#kAvgD').innerHTML=!any&&cur.length&&prev.length?delta(s/cur.length,ps/prev.length):'';
+  const first=cur.length?cur[cur.length-1].at:today;const phones=[...new Set(cur.map(o=>o.phone))];const rep=phones.filter(p=>liveOrders().some(o=>o.phone===p&&o.at<first)).length;
+  $('#kRep').innerHTML=`${rep}<small>of ${phones.length}</small>`;$('#kRepD').innerHTML=`<span class="muted">${phones.length?Math.round(rep/phones.length*100):0}% returning · ${phones.length-rep} new</span>`;
+  // daily chart (shows all 14 days; other filters apply; click = day filter)
+  const dl=applyF(liveOrders(),'day');const d14=[];for(let d=13;d>=0;d--){const day=new Date(today);day.setDate(day.getDate()-d);const k=day.toDateString();d14.push({day,k,v:dl.filter(o=>o.at.toDateString()===k).reduce((a,o)=>a+o.total,0)});}
+  const mx=Math.max(...d14.map(x=>x.v))||1;let svg='';d14.forEach((x,i)=>{const h=x.v/mx*140,X=20+i*44,sel=F.day===x.k,dim=F.day&&!sel;svg+=`<g class="hit" data-day="${x.k}"><rect x="${X}" y="0" width="40" height="176" fill="transparent"/><rect x="${X}" y="${160-h}" width="32" height="${h}" rx="4" fill="${sel||(!F.day&&i===13)?'#a8232b':'#e3b3b0'}" opacity="${dim?.45:1}"/><text x="${X+16}" y="${152-h}" text-anchor="middle" font-size="10" fill="#8b8078">${Math.round(x.v/100)/10}k</text><text x="${X+16}" y="176" text-anchor="middle" font-size="10" font-weight="${sel?700:400}" fill="${sel?'#a8232b':'#8b8078'}">${x.day.getDate()}</text></g>`;});
+  $('#cDaily').innerHTML=svg+`<text x="20" y="192" font-size="10" fill="#8b8078">Click a day to filter · today in red</text>`;
+  $$('#cDaily .hit').forEach(g=>g.onclick=()=>setF('day',g.dataset.day));
+  // share donut
+  const dKey=dayKey(range==='today'?new Date(today.getTime()-864e5):today);const zk=Object.keys(zTotals).filter(k=>{const d=new Date(k+'T00:00:00');return F.day?dayKey(new Date(F.day))===k:days===1?k===dKey:inRange({at:d},days);});const zt=zk.reduce((a,k)=>a+zTotals[k],0);const ws=liveOrders().filter(o=>zk.includes(dayKey(o.at))).reduce((a,o)=>a+o.total,0);const share=zt?ws/zt:0;
+  const R=70,C=2*Math.PI*R;$('#cShare').innerHTML=`<circle cx="100" cy="100" r="${R}" fill="none" stroke="#f3e8da" stroke-width="22"/><circle cx="100" cy="100" r="${R}" fill="none" stroke="#a8232b" stroke-width="22" stroke-dasharray="${C*share} ${C}" transform="rotate(-90 100 100)"/><text x="100" y="96" text-anchor="middle" font-family="Archivo Black" font-size="28" fill="#312d29">${Math.round(share*100)}%</text><text x="100" y="116" text-anchor="middle" font-size="11" fill="#8b8078">WhatsApp</text><text x="186" y="80" font-size="12" font-weight="600" fill="#312d29">WhatsApp ${SR(ws)}</text><text x="186" y="100" font-size="12" fill="#8b8078">POS ${SR(zt)}</text><text x="186" y="120" font-size="9.5" fill="#8b8078">${zk.length===0?'no Z-report for this day yet':zk.length===1?fmtD(new Date(zk[0]+'T00:00:00')):zk.length+' days with a Z-report'}</text>`;
+  // hours (click = hour filter)
+  const hl=applyF(base,'hour');const hrs=Array(24).fill(0);hl.forEach(o=>hrs[o.at.getHours()]++);const hm=Math.max(...hrs)||1;let hs='';for(let h=7;h<24;h++){const v=hrs[h],H=v/hm*120,X=20+(h-7)*36,sel=F.hour===h,dim=F.hour!==null&&!sel;hs+=`<g class="hit" data-h="${h}"><rect x="${X}" y="0" width="34" height="160" fill="transparent"/><rect x="${X}" y="${140-H}" width="26" height="${H}" rx="4" fill="${sel||(F.hour===null&&v===hm)?'#a8232b':'#e0a35b'}" opacity="${dim?.45:1}"/><text x="${X+13}" y="156" text-anchor="middle" font-size="10" font-weight="${sel?700:400}" fill="${sel?'#a8232b':'#8b8078'}">${h%12||12}${h<12?'a':'p'}</text></g>`;}
+  $('#cHours').innerHTML=hs+`<text x="20" y="174" font-size="10" fill="#8b8078">Click an hour to filter · peak in red</text>`;
+  $$('#cHours .hit').forEach(g=>g.onclick=()=>setF('hour',+g.dataset.h));
+  // top items (click = item filter)
+  const il=applyF(base,'item');const agg={};il.forEach(o=>o.lines.forEach(l=>{agg[l.id]=agg[l.id]||{id:l.id,name:l.name,qty:0,sales:0};agg[l.id].qty+=l.qty;agg[l.id].sales+=l.qty*l.price;}));const top=Object.values(agg).sort((a,b)=>b.qty-a.qty).slice(0,8);const tm=top[0]?.qty||1;
+  $('#topItems tbody').innerHTML=top.map((t,i)=>`<tr class="hit ${F.item===t.id?'sel':''}" data-id="${t.id}"><td><span class="rank ${i<3?'top':''}">${i+1}</span>${t.name}<div class="bar"><i style="width:${t.qty/tm*100}%"></i></div></td><td class="num">${t.qty}</td><td class="num">${SR(t.sales)}</td></tr>`).join('')||'<tr><td class="empty">No orders match</td></tr>';
+  $$('#topItems .hit').forEach(r=>r.onclick=()=>setF('item',r.dataset.id));
+  // by category (click = group filter)
+  const gl=applyF(base,'group');const bc={};gl.forEach(o=>o.lines.forEach(l=>{const g=groupOf[catOf[l.id]];bc[g]=(bc[g]||0)+l.qty*l.price;}));const cm=Math.max(...Object.values(bc),1);const gs=Object.values(bc).reduce((a,b)=>a+b,0);
+  $('#byCat tbody').innerHTML=Object.entries(bc).sort((a,b)=>b[1]-a[1]).map(([g,v])=>`<tr class="hit ${F.group===g?'sel':''}" data-g="${g}"><td>${g}<div class="bar amber"><i style="width:${v/cm*100}%"></i></div></td><td class="num">${SR(v)}</td><td class="num muted">${gs?Math.round(v/gs*100):0}%</td></tr>`).join('');
+  $$('#byCat .hit').forEach(r=>r.onclick=()=>setF('group',r.dataset.g));
+  // type & payment (click = filter)
+  const tl=applyF(base,'type'),pl=applyF(base,'pay');const bt={},bp={};tl.forEach(o=>bt[o.type]=(bt[o.type]||0)+1);pl.forEach(o=>bp[o.pay]=(bp[o.pay]||0)+1);
+  $('#byType tbody').innerHTML=Object.entries(bt).map(([k,v])=>`<tr class="hit ${F.type===k?'sel':''}" data-k="type" data-v="${k}"><td><span class="tag ${k==='Delivery'?'del':''}">${k}</span></td><td class="num">${v}</td><td class="num muted">${tl.length?Math.round(v/tl.length*100):0}%</td></tr>`).join('')+`<tr><td colspan="3" class="caption" style="padding-top:12px">Payment</td></tr>`+Object.entries(bp).map(([k,v])=>`<tr class="hit ${F.pay===k?'sel':''}" data-k="pay" data-v="${k}"><td>${k}</td><td class="num">${v}</td><td class="num muted">${pl.length?Math.round(v/pl.length*100):0}%</td></tr>`).join('');
+  $$('#byType .hit').forEach(r=>r.onclick=()=>setF(r.dataset.k,r.dataset.v));
+  // drill list
+  $('#drill').classList.toggle('hidden',!any);
+  if(any){$('#drillTitle').textContent=`Matching orders · ${cur.length}`;$('#drillTbl tbody').innerHTML=cur.slice(0,50).map(o=>`<tr><td>${fmtD(o.at)}<br><span class="caption">${fmtT(o.at)}</span></td><td>${esc(o.name)||'—'}<br><span class="caption">${o.phone}</span></td><td>${o.lines.map(l=>(l.qty>1?l.qty+'× ':'')+(F.item===l.id?'<b class="red">'+esc(l.name)+'</b>':esc(l.name))).join(', ')}</td><td><span class="tag ${o.type==='Delivery'?'del':''}">${o.type}</span></td><td class="caption">${o.pay}</td><td class="num"><b>${SR(o.total)}</b></td></tr>`).join('')+(cur.length>50?`<tr><td colspan="6" class="caption">Showing 50 of ${cur.length}</td></tr>`:'');}
+}
+
+/* ---------- items ---------- */
+function renderItems(){const cur=liveOrders().filter(o=>inRange(o,30));const agg={};cur.forEach(o=>o.lines.forEach(l=>{const a=agg[l.id]=agg[l.id]||{name:l.name,cat:catOf[l.id],qty:0,sales:0,orders:0,w:[0,0,0,0]};a.qty+=l.qty;a.sales+=l.qty*l.price;a.orders++;a.w[Math.min(3,Math.floor((today-o.at)/864e5/7.5))]+=l.qty;}));
+  const rows=Object.values(agg).sort((a,b)=>b.qty-a.qty);
+  $('#itemsTbl tbody').innerHTML=rows.map(a=>{const m=Math.max(...a.w,1);const sp=`<svg width="64" height="18">${a.w.map((v,i)=>`<rect x="${(3-i)*16}" y="${18-v/m*18}" width="12" height="${v/m*18}" fill="#a8232b" opacity=".8" rx="2"/>`).join('')}</svg>`;return `<tr><td>${a.name}</td><td class="caption">${a.cat}</td><td class="num">${a.qty}</td><td class="num">${SR(a.sales)}</td><td class="num">${a.orders}</td><td>${sp}</td></tr>`;}).join('');}
+
+/* ---------- customers ---------- */
+function renderCustomers(){const by={};liveOrders().forEach(o=>{const c=by[o.phone]=by[o.phone]||{name:o.name,phone:o.phone,n:0,spent:0,last:o.at,fav:{}};c.n++;c.spent+=o.total;if(o.at>c.last)c.last=o.at;o.lines.forEach(l=>c.fav[l.name]=(c.fav[l.name]||0)+l.qty);});
+  const rows=Object.values(by).sort((a,b)=>b.spent-a.spent);
+  $('#custTbl tbody').innerHTML=(rows.length?rows:[]).map(c=>{const fav=Object.entries(c.fav).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';return `<tr><td>${esc(c.name)||'—'} ${c.n>1?'<span class="tag rep">Repeat</span>':'<span class="tag new">New</span>'}</td><td class="caption">${c.phone}</td><td class="num">${c.n}</td><td class="num">${SR(c.spent)}</td><td class="caption">${fmtD(c.last)}</td><td class="caption">${esc(fav)}</td><td><a class="wa" href="https://wa.me/966${c.phone.slice(1)}" target="_blank" rel="noopener"><svg width="14" height="14"><use href="#i-wa"/></svg>Message</a></td></tr>`;}).join('');}
+
+/* ---------- settings ---------- */
+$('#zDate').value=dayKey(new Date());
+$('#zSave').onclick=async()=>{const v=parseFloat(($('#zTotal').value||'').replace(/[\s,]/g,''));if(!v)return toast('Enter the total');try{await saveZ($('#zDate').value,v);toast('POS total saved for '+$('#zDate').value);$('#zTotal').value='';}catch(e){toast('Could not save (managers only)');}};
+const csvq=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+async function download(name,rows){const csv='\ufeff'+rows.map(r=>r.map(csvq).join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=name;document.body.appendChild(a);a.click();a.remove();toast('Downloaded '+name);}
+$$('[data-csv]').forEach(b=>b.onclick=()=>{const k=b.dataset.csv;
+  if(k==='orders')download('arch-view-orders.csv',[['Order','Date','Time','Phone','Customer','Type','Payment','Total','Status','Source','Logged by','Items'],...orders.map(o=>[o.id,dayKey(o.at),fmtT(o.at),o.phone,o.name,o.type,o.pay,o.total,o.status,o.src,byName(o.by),o.lines.map(l=>l.qty+'x '+l.name).join('; ')])]);
+  if(k==='items'){const agg={};liveOrders().forEach(o=>o.lines.forEach(l=>{const a=agg[l.id]=agg[l.id]||{name:l.name,cat:catOf[l.id],qty:0,sales:0};a.qty+=l.qty;a.sales+=l.qty*l.price;}));download('arch-view-items.csv',[['Item','Category','Qty','Sales'],...Object.values(agg).sort((a,b)=>b.qty-a.qty).map(a=>[a.name,a.cat,a.qty,a.sales])]);}
+  if(k==='customers'){const by={};liveOrders().forEach(o=>{const c=by[o.phone]=by[o.phone]||{name:o.name,phone:o.phone,n:0,spent:0,last:o.at};c.n++;c.spent+=o.total;if(o.at>c.last)c.last=o.at;});download('arch-view-customers.csv',[['Phone','Name','Orders','Spent','Last order'],...Object.values(by).map(c=>[c.phone,c.name,c.n,c.spent,dayKey(c.last)])]);}
+});
+boot();
+
+</script>
+</body>
+</html>
